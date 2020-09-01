@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Ispovesti tacka ba</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+    />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  </head>
+
+  <style>
+    div.ispovest {
+      margin: 10px;
+    }
+    body {
+      background-color: black;
+    }
+    div {
+      color: white;
+      font-size: large;
+    }
+    div.ispovestText {
+      font-size: larger;
+    }
+    div.jumbotron {
+      background-color: black;
+      color: white;
+    }
+  </style>
+
+  <body>
+    <div class="jumbotron text-center">
+      <h1>Ispovesti.ba</h1>
+      <p>
+        Lične ispovesti generisovane najboljom umetnom inteligencijom
+        današnjice!
+      </p>
+    </div>
+
+    <div class="container">
+      {% for ispovest in ispovesti %}
+      <div class="row ispovest">
+        <div class="row ispovestText">{{ispovest.text}}</div>
+      </div>
+      <div class="row comments">
+        <h2>Komentari:</h2>
+        {% for comment in ispovest.comments %}
+        <i>{{comment.author}}:</i>
+        {{comment.text}}
+        <br />
+        {% endfor %}
+      </div>
+      <div class="row commentForm">
+        <form action="{{url_for('addComment')}}" method="post">
+          <div class="form-group">
+            <label for="commentInput">Dodaj novi komentar</label>
+            <input
+              type="text"
+              class="form-control"
+              name="commentInput"
+              id="commentInput"
+              aria-describedby="commentHelp"
+              placeholder="Vaš komentar"
+            />
+            <input type="hidden" name="ispovestId" value="{{ispovest._id}}" />
+            <small id="commentHelp" class="form-text text-muted"
+              >Nemojte da psujete znamo ko ste</small
+            >
+          </div>
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </body>
+</html>
