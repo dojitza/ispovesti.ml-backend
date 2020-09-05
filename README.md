@@ -1,3 +1,3 @@
-# ispovesti.ba-website
+# ispovesti.ml-website
 
-env FLASK_APP=main.py FLASK_ENV=development flask run
+env FLASK_APP=main.py FLASK_ENV=development flask run --host=0.0.0.0

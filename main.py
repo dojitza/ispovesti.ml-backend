@@ -79,12 +79,22 @@ def parseispovestTupleToDict(ispovestTuple):
 @ app.route('/')
 def index():
 
+    likeReactionTextArray = ['Too miško', 'Bravo ase', 'Svaka ti dala']
+    dislikeReactionTextArray = [
+        'Loše brate', 'Šta sve neču da pročitam', 'Treba da te streljamo']
+
     ispovesti = [parseispovestTupleToDict(
         i) for i in getIspovesti(page=0)]
 
+    arenaIspovesti = ispovesti
+
     # return str(ispovestiDicts)
 
-    return render_template('index.html', ispovesti=ispovesti)
+    return render_template('index.html',
+                           ispovesti=ispovesti,
+                           likes=likeReactionTextArray,
+                           dislikes=dislikeReactionTextArray,
+                           arenaIspovesti=arenaIspovesti)
 
 
 @ app.route('/addComment', methods=['POST'])
