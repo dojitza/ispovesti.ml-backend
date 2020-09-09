@@ -20,12 +20,12 @@ def create_connection(db_file):
 
 def createIspovest(conn, ispovest):
     """
-    Create a new ispovest into the ispovesti table
+    Create a new ispovest into the ispovest table
     :param conn:
     :param ispovest:
     :return: ispovest id
     """
-    sql = ''' INSERT INTO ispovesti(content)
+    sql = ''' INSERT INTO ispovest(content)
               VALUES(?) '''
 
     cur = conn.cursor()
@@ -42,11 +42,45 @@ def createKomentar(conn, komentar):
     :return: komentar id
     """
 
-    sql = ''' INSERT INTO komentari(author,content,ispovestId)
+    sql = ''' INSERT INTO komentar(author,content,ispovestId)
               VALUES(?,?,?) '''
 
     cur = conn.cursor()
     cur.execute(sql, komentar)
+    conn.commit()
+    return cur.lastrowid
+
+
+def createIspovestReaction(conn, reaction):
+    """
+    Create a new reaction
+    :param conn:
+    :param komentar:
+    :return: komentar id
+    """
+
+    sql = ''' INSERT INTO ispovestreaction(reaction,authorId,ispovestId)
+              VALUES(?,?,?) '''
+
+    cur = conn.cursor()
+    cur.execute(sql, reaction)
+    conn.commit()
+    return cur.lastrowid
+
+
+def createKomentarReaction(conn, reaction):
+    """
+    Create a new reaction
+    :param conn:
+    :param komentar:
+    :return: komentar id
+    """
+
+    sql = ''' INSERT INTO komentarreaction(reaction,authorId,komentarId)
+              VALUES(?,?,?) '''
+
+    cur = conn.cursor()
+    cur.execute(sql, reaction)
     conn.commit()
     return cur.lastrowid
 
@@ -57,17 +91,21 @@ def main():
     # create a database connection
     conn = create_connection(database)
     with conn:
-        # create a new ispovest
-        ispovest = ('Verenik i ja smo se verili hehe',)
+
+        ispovest = ('Verenik i ja smo se verili hehe 4',)
         ispovestId = createIspovest(conn, ispovest)
 
-        # tasks
         komentar1 = ('Autorka', 'Mnogo dobro sestro!', ispovestId)
         komentar2 = ('Momčilo', 'Jadan li je...', ispovestId)
 
-        # create tasks
         createKomentar(conn, komentar1)
         createKomentar(conn, komentar2)
+
+        reaction1 = (0, 121, ispovestId)
+        reaction2 = (0, 122, ispovestId)
+
+        createIspovestReaction(conn, reaction1)
+        createIspovestReaction(conn, reaction2)
 
 
 if __name__ == '__main__':

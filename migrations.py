@@ -35,23 +35,37 @@ def create_table(conn, create_table_sql):
 def main():
     database = DATABASE
 
-    sql_create_projects_table = """ 
-    CREATE TABLE IF NOT EXISTS ispovesti(
+    sql_create_ispovest_table = """ 
+    CREATE TABLE IF NOT EXISTS ispovest(
         id integer PRIMARY KEY,
-        content text NOT NULL,
-        likes integer NOT NULL DEFAULT 0,
-        dislikes integer NOT NULL DEFAULT 0
+        content text NOT NULL
     );"""
 
-    sql_create_tasks_table = """
-    CREATE TABLE IF NOT EXISTS komentari(
+    sql_create_komentar_table = """
+    CREATE TABLE IF NOT EXISTS komentar(
         id integer PRIMARY KEY,
         author text NOT NULL,
         content text NOT NULL,
         ispovestId integer NOT NULL,
-        likes integer NOT NULL DEFAULT 0,
-        dislikes integer NOT NULL DEFAULT 0,
-        FOREIGN KEY(ispovestId) REFERENCES ispovesti(id)
+        FOREIGN KEY(ispovestId) REFERENCES ispovest(id)
+    );"""
+
+    sql_create_ispovest_reaction_table = """
+    CREATE TABLE IF NOT EXISTS ispovestreaction(
+        id integer PRIMARY KEY,
+        authorId integer NOT NULL,
+        reaction integer NOT NULL,
+        ispovestId integer NOT NULL,
+        FOREIGN KEY(ispovestId) REFERENCES ispovest(id)
+    );"""
+
+    sql_create_komentar_reaction_table = """
+    CREATE TABLE IF NOT EXISTS ispovestreaction(
+        id integer PRIMARY KEY,
+        authorId integer NOT NULL,
+        reaction integer NOT NULL,
+        komentarId integer NOT NULL,
+        FOREIGN KEY(komentarId) REFERENCES komentar(id)
     );"""
 
     # create a database connection
@@ -59,11 +73,11 @@ def main():
 
     # create tables
     if conn is not None:
-        # create projects table
-        create_table(conn, sql_create_projects_table)
+        create_table(conn, sql_create_ispovest_table)
+        create_table(conn, sql_create_komentar_table)
+        create_table(conn, sql_create_ispovest_reaction_table)
+        create_table(conn, sql_create_komentar_reaction_table)
 
-        # create tasks table
-        create_table(conn, sql_create_tasks_table)
     else:
         print("Error! cannot create the database connection.")
 

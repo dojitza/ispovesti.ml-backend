@@ -1,4 +1,4 @@
-from flask import Flask, escape, request, jsonify
+from flask import Flask, escape, request, jsonify, abort, Response
 from flask import render_template
 import datetime
 import sqlite3
@@ -8,11 +8,13 @@ from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
 import os
 
+CONSTANTS_DATABASE = 'database.db'
+CONSTANTS_LIKE = 1
+CONSTANTS_DISLIKE = 0
 
-DATABASE = 'database.db'
 
 app = Flask(__name__)
-CSRFProtect(app)
+# CSRFProtect(app)
 CORS(app)
 SECRET_KEY = os.urandom(32)
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -33,13 +35,16 @@ def parseIspovestTupleToDict(ispovestTuple):
         'text': ispovestTuple[1],
         'likes': ispovestTuple[2],
         'dislikes': ispovestTuple[3],
+        'timesLiked': ispovestTuple[4],
+        'timesDisliked': ispovestTuple[5],
+
     }
 
 
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
+        db = g._database = sqlite3.connect(CONSTANTS_DATABASE)
     return db
 
 
@@ -50,8 +55,34 @@ def close_connection(exception):
         db.close()
 
 
+'''
+returns true if uniqueidentifier string's hash has an entry in the table
+with the provided ispovestId. This means a user has previously liked
+'''
+
+
+def postIspovestReaction(uniqueIdentifierString, reaction, ispovestId):
+    authorId = hash(uniqueIdentifierString)
+    sql = """ INSERT INTO ispovestreaction(reaction, authorId, ispovestId)
+            VALUES(?,?,?) """
+    cur = get_db().cursor()
+    cur.execute(sql, (reaction, authorId, ispovestId))
+    get_db().commit()
+    return cur.lastrowid
+
+
+def getReactionToIspovest(uniqueIdentifierString, ispovestId):
+    authorId = hash(uniqueIdentifierString)
+    sql = """SELECT reaction FROM ispovestreaction WHERE authorId=? and ispovestId=?"""
+    reaction = get_db().cursor().execute(sql, (authorId, ispovestId)).fetchone()
+    if (reaction):
+        return reaction[0]
+    else:
+        return None
+
+
 def getKomentari(ispovestId):
-    sql = """ SELECT * FROM komentari
+    sql = """ SELECT * FROM komentar
               WHERE ispovestId = ? """
     komentariTuples = get_db().cursor().execute(sql, (ispovestId,)).fetchall()
     return [parseKomentarTupleToDict(komentarTuple) for komentarTuple in komentariTuples]
@@ -59,15 +90,35 @@ def getKomentari(ispovestId):
 
 @app.route('/api/v1/ispovesti', methods=['GET'])
 def getIspovesti():
-    sql = """ SELECT * FROM ispovesti """
-    ispovestiTuples = get_db().cursor().execute(sql).fetchall()
+    authorId = hash(str(request.user_agent) + str(request.remote_addr))
+    sql = """ SELECT
+                    ispovest.id,
+                    ispovest.content,
+                    sum(case when reaction = 1 then 1 else 0 end) AS likes,
+                    sum(case when reaction = 0 then 1 else 0 end) AS dislikes,
+                    sum(case when (ispovestreaction.authorid = ? AND ispovestreaction.reaction = 1) then 1 else 0 end) AS timesLiked,
+                    sum(case when (ispovestreaction.authorid = ? AND ispovestreaction.reaction = 0) then 1 else 0 end) AS timesDisliked
+                FROM ispovest
+                JOIN ispovestreaction
+                ON ispovest.id = ispovestreaction.ispovestId
+                GROUP BY ispovest.id"""
+    ispovestiTuples = get_db().cursor().execute(
+        sql, (authorId, authorId)).fetchall()
     return jsonify([parseIspovestTupleToDict(ispovestTuple) for ispovestTuple in ispovestiTuples])
 
 
 @app.route('/api/v1/ispovesti/<int:ispovestId>', methods=['GET'])
 def getIspovest(ispovestId):
-    sql = """ SELECT * FROM ispovesti
-              WHERE id = ? """
+    sql = """   SELECT
+                    ispovest.id,
+                    ispovest.content,
+                    sum(case when reaction = 1 then 1 else 0 end) AS likes,
+                    sum(case when reaction = 0 then 1 else 0 end) AS dislikes
+                FROM ispovest
+                JOIN ispovestreaction
+                ON ispovest.id = ispovestreaction.ispovestId
+                WHERE ispovest.id = ?
+                GROUP BY ispovest.id """
     ispovest = get_db().cursor().execute(sql, (ispovestId,)).fetchone()
     parsedIspovest = parseIspovestTupleToDict(ispovest)
     parsedKomentari = getKomentari(ispovestId)
@@ -81,20 +132,34 @@ def postKomentar(ispovestId, komentar):
 
 
 @app.route('/api/v1/ispovesti/<int:ispovestId>/postLike', methods=['POST'])
-def likeKomentar(komentarId):
-    return jsonify('lajk')
-
-
-@app.route('/api/v1/ispovesti/<int:ispovestId>/postDislike')
-def dislikeKomentar(komentarId):
-    pass
-
-
 def likeIpovest(ispovestId):
-    pass
+    reaction = getReactionToIspovest(
+        str(request.user_agent) + str(request.remote_addr), ispovestId)
+    if (reaction):
+        abort(403)
+    else:
+        reactionId = postIspovestReaction(
+            str(request.user_agent) + str(request.remote_addr), CONSTANTS_LIKE, ispovestId)
+        return Response(jsonify(reactionId), status=201, mimetype='application/json')
 
 
+@ app.route('/api/v1/ispovesti/<int:ispovestId>/postDislike', methods=['POST'])
 def dislikeIpovest(ispovestId):
+    reaction = getReactionToIspovest(
+        str(request.user_agent) + str(request.remote_addr), ispovestId)
+    if (reaction):
+        abort(403)
+    else:
+        reactionId = postIspovestReaction(
+            str(request.user_agent) + str(request.remote_addr), CONSTANTS_DISLIKE, ispovestId)
+        return Response(jsonify(reactionId), status=201, mimetype='application/json')
+
+
+def likeKomentar(komentarId):
+    return jsonify(request.remote_addr)
+
+
+def dislikeKomentar(komentarId):
     pass
 
 
