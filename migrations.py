@@ -35,6 +35,12 @@ def create_table(conn, create_table_sql):
 def main():
     database = DATABASE
 
+    sql_create_arena_ispovest_table = """ 
+    CREATE TABLE IF NOT EXISTS arenaIspovest(
+        id integer PRIMARY KEY,
+        content text NOT NULL
+    );"""
+
     sql_create_ispovest_table = """ 
     CREATE TABLE IF NOT EXISTS ispovest(
         id integer PRIMARY KEY,
@@ -68,6 +74,15 @@ def main():
         FOREIGN KEY(komentarId) REFERENCES komentar(id)
     );"""
 
+    sql_create_arena_ispovest_reaction_table = """
+    CREATE TABLE IF NOT EXISTS arenaispovestreaction(
+        id integer PRIMARY KEY,
+        authorId integer NOT NULL,
+        reaction integer NOT NULL,
+        arenaIspovestId integer NOT NULL,
+        FOREIGN KEY(arenaIspovestId) REFERENCES arenaIspovest(id)
+    );"""
+
     # create a database connection
     conn = create_connection(database)
 
@@ -77,6 +92,8 @@ def main():
         create_table(conn, sql_create_komentar_table)
         create_table(conn, sql_create_ispovest_reaction_table)
         create_table(conn, sql_create_komentar_reaction_table)
+        create_table(conn, sql_create_arena_ispovest_table)
+        create_table(conn, sql_create_arena_ispovest_reaction_table)
 
     else:
         print("Error! cannot create the database connection.")

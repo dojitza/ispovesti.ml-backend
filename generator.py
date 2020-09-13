@@ -18,6 +18,16 @@ def create_connection(db_file):
     return conn
 
 
+def createArenaIspovest(conn, arenaIspovest):
+    sql = ''' INSERT INTO arenaIspovest(content)
+              VALUES(?) '''
+
+    cur = conn.cursor()
+    cur.execute(sql, arenaIspovest)
+    conn.commit()
+    return cur.lastrowid
+
+
 def createIspovest(conn, ispovest):
     """
     Create a new ispovest into the ispovest table
@@ -92,7 +102,8 @@ def main():
     conn = create_connection(database)
     with conn:
 
-        ispovest = ('Verenik i ja smo se verili hehe 4',)
+        '''
+        ispovest = ('Verenik i ja smo se verili hehe 5',)
         ispovestId = createIspovest(conn, ispovest)
 
         komentar1 = ('Autorka', 'Mnogo dobro sestro!', ispovestId)
@@ -106,6 +117,10 @@ def main():
 
         createIspovestReaction(conn, reaction1)
         createIspovestReaction(conn, reaction2)
+        '''
+
+        arenaIspovest = ('Bleko haram gereeeeeeeee 1',)
+        createArenaIspovest(conn, arenaIspovest)
 
 
 if __name__ == '__main__':
