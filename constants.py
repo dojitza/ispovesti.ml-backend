@@ -1,3 +1,5 @@
 DATABASE = 'database.db'
 LIKE = 1
 DISLIKE = 0
+SUPERLIKE = 2
+INVALID = -1

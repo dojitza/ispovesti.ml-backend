@@ -1,17 +1,13 @@
-from flask import Flask, escape, request, jsonify, abort, Response
-from flask import render_template
-import datetime
-import sqlite3
-from flask import g
-from ispovest import ispovest
+
+from flask import Flask, escape, request, jsonify, abort, Response, g
+
 from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
 import os
 
-CONSTANTS_DATABASE = 'database.db'
-CONSTANTS_LIKE = 1
-CONSTANTS_DISLIKE = 0
-CONSTANTS_SUPERLIKE = 2
+import db
+import constants
+import helpers
 
 app = Flask(__name__)
 # CSRFProtect(app)
@@ -20,72 +16,11 @@ SECRET_KEY = os.urandom(32)
 app.config['SECRET_KEY'] = SECRET_KEY
 
 
-def dbKomentarToObject(komentarTuple):
-    return {
-        'author': komentarTuple[1],
-        'text': komentarTuple[2],
-        'likes': komentarTuple[4],
-        'dislikes': komentarTuple[5]
-    }
-
-
-def dbIspovestToObject(ispovestTuple):
-    return {
-        'id': ispovestTuple[0],
-        'text': ispovestTuple[1],
-        'likes': ispovestTuple[2],
-        'dislikes': ispovestTuple[3],
-        'timesLiked': ispovestTuple[4],
-        'timesDisliked': ispovestTuple[5],
-    }
-
-
-def dbArenaIspovestToObject(ispovestTuple):
-    return {
-        'id': ispovestTuple[0],
-        'text': ispovestTuple[1],
-    }
-
-
-def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = sqlite3.connect(CONSTANTS_DATABASE)
-    return db
-
-
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
-
-
-def postIspovestReaction(uniqueIdentifierString, reaction, ispovestId):
-    authorId = hash(uniqueIdentifierString)
-    sql = """ INSERT INTO ispovestreaction(reaction, authorId, ispovestId)
-            VALUES(?,?,?) """
-    cur = get_db().cursor()
-    cur.execute(sql, (reaction, authorId, ispovestId))
-    get_db().commit()
-    return cur.lastrowid
-
-
-def getReactionToIspovest(uniqueIdentifierString, ispovestId):
-    authorId = hash(uniqueIdentifierString)
-    sql = """SELECT reaction FROM ispovestreaction WHERE authorId=? and ispovestId=?"""
-    reaction = get_db().cursor().execute(sql, (authorId, ispovestId)).fetchone()
-    if (reaction):
-        return reaction[0]
-    else:
-        return None
-
-
-def getKomentari(ispovestId):
-    sql = """ SELECT * FROM komentar
-              WHERE ispovestId = ? """
-    komentariTuples = get_db().cursor().execute(sql, (ispovestId,)).fetchall()
-    return [dbKomentarToObject(komentarTuple) for komentarTuple in komentariTuples]
 
 
 @app.route('/api/v1/ispovesti', methods=['GET'])
@@ -102,75 +37,83 @@ def getIspovesti():
                 JOIN ispovestreaction
                 ON ispovest.id = ispovestreaction.ispovestId
                 GROUP BY ispovest.id"""
-    ispovestiTuples = get_db().cursor().execute(
+    ispovestiTuples = db.get_db().cursor().execute(
         sql, (authorId, authorId)).fetchall()
-    return jsonify([dbIspovestToObject(ispovestTuple) for ispovestTuple in ispovestiTuples])
+    return jsonify([db.dbIspovestToObject(ispovestTuple) for ispovestTuple in ispovestiTuples])
 
 
 @app.route('/api/v1/ispovesti/<int:ispovestId>', methods=['GET'])
 def getIspovest(ispovestId):
-    sql = """   SELECT
-                    ispovest.id,
-                    ispovest.content,
-                    sum(case when reaction = 1 then 1 else 0 end) AS likes,
-                    sum(case when reaction = 0 then 1 else 0 end) AS dislikes
-                FROM ispovest
-                JOIN ispovestreaction
-                ON ispovest.id = ispovestreaction.ispovestId
-                WHERE ispovest.id = ?
-                GROUP BY ispovest.id """
-    ispovest = get_db().cursor().execute(sql, (ispovestId,)).fetchone()
-    parsedIspovest = dbIspovestToObject(ispovest)
-    parsedKomentari = getKomentari(ispovestId)
-    parsedIspovest['comments'] = parsedKomentari
-    return jsonify(parsedIspovest)
+    ispovest = db.getIspovest(ispovestId)
+    return jsonify(ispovest)
 
 
 @app.route('/api/v1/arenaIspovesti', methods=['GET'])
 def getArenaIspovesti():
     authorId = hash(str(request.user_agent) + str(request.remote_addr))
-    sql = """   SELECT
-                    arenaispovest.id,
-                    arenaispovest.content
-                FROM arenaispovest
-                LEFT JOIN arenaIspovestReaction
-                ON arenaispovest.id = arenaispovestreaction.arenaIspovestId
-                GROUP BY arenaispovest.id
-				HAVING (sum(arenaIspovestReaction.authorid = ?) < 1)
-                OR (sum(arenaIspovestReaction.authorid = ?) is NULL)"""
-
-    ispovestiTuples = get_db().cursor().execute(
-        sql, (authorId, authorId)).fetchall()
-    return jsonify([dbArenaIspovestToObject(ispovestTuple) for ispovestTuple in ispovestiTuples])
-
-
-def postKomentar(ispovestId, komentar):
-    print(request.user_agent, request.remote_addr)
-    return jsonify(request.remote_addr)
+    arenaIspovesti = db.getArenaIspovesti(authorId)
+    return jsonify(arenaIspovesti)
 
 
 @app.route('/api/v1/ispovesti/<int:ispovestId>/postLike', methods=['POST'])
 def likeIpovest(ispovestId):
-    reaction = getReactionToIspovest(
+    reaction = db.getReactionToIspovest(
         str(request.user_agent) + str(request.remote_addr), ispovestId)
     if (reaction):
         abort(403)
     else:
-        reactionId = postIspovestReaction(
-            str(request.user_agent) + str(request.remote_addr), CONSTANTS_LIKE, ispovestId)
+        reactionId = db.postIspovestReaction(
+            str(request.user_agent) + str(request.remote_addr), constants.LIKE, ispovestId)
         return Response(jsonify(reactionId), status=201, mimetype='application/json')
 
 
 @ app.route('/api/v1/ispovesti/<int:ispovestId>/postDislike', methods=['POST'])
 def dislikeIpovest(ispovestId):
-    reaction = getReactionToIspovest(
+    reaction = db.getReactionToIspovest(
         str(request.user_agent) + str(request.remote_addr), ispovestId)
     if (reaction):
         abort(403)
     else:
-        reactionId = postIspovestReaction(
-            str(request.user_agent) + str(request.remote_addr), CONSTANTS_DISLIKE, ispovestId)
+        reactionId = db.postIspovestReaction(
+            str(request.user_agent) + str(request.remote_addr), constants.DISLIKE, ispovestId)
         return Response(jsonify(reactionId), status=201, mimetype='application/json')
+
+
+@ app.route('/api/v1/arenaIspovesti/<int:arenaIspovestId>/postReaction', methods=['POST'])
+def postArenaIspovestReaction(arenaIspovestId):
+    reactionString = request.json
+    reactionConstant = helpers.mapReactionStringToConstant(reactionString)
+
+    reaction = db.getReactionToArenaIspovest(
+        str(request.user_agent) + str(request.remote_addr), arenaIspovestId)
+
+    if (reaction):
+        abort(403)
+    else:
+        reactionId = db.postArenaIspovestReaction(
+            str(request.user_agent) + str(request.remote_addr), reactionConstant, arenaIspovestId)
+        return Response(jsonify(reactionId), status=201, mimetype='application/json')
+
+
+@ app.route('/')
+def index():
+    return jsonify('use /api/v1/ endpoint to access the rest service')
+
+
+@ app.route('/addComment', methods=['POST'])
+def addComment():
+
+    print(request.form['ispovestId'])
+    print(request.form['commentInput'])
+
+    return index()
+
+
+def getKomentari(ispovestId):
+    sql = """ SELECT * FROM komentar
+              WHERE ispovestId = ? """
+    komentariTuples = db.get_db().cursor().execute(sql, (ispovestId,)).fetchall()
+    return [db.dbKomentarToObject(komentarTuple) for komentarTuple in komentariTuples]
 
 
 def likeKomentar(komentarId):
@@ -181,49 +124,5 @@ def dislikeKomentar(komentarId):
     pass
 
 
-@ app.route('/api/v1/arenaIspovesti/<int:arenaIspovestId>/postReaction', methods=['POST'])
-def postArenaIspovestReaction(ispovestId):
-    reaction = request.body.reaction
-    return jsonify(reaction)
-    '''
-    reaction = getReactionToArenaIspovest(
-        str(request.user_agent) + str(request.remote_addr), ispovestId, reaction)
-    if (reaction):
-        abort(403)
-    else:
-        reactionId = postIspovestReaction(
-            str(request.user_agent) + str(request.remote_addr), CONSTANTS_DISLIKE, ispovestId)
-        return Response(jsonify(reactionId), status=201, mimetype='application/json')
-    '''
-
-
-@ app.route('/')
-def index():
-
-    return 'use /api/v1/ endpoint to access the rest service'
-
-    likeReactionTextArray = ['Too miško', 'Bravo ase', 'Svaka ti dala']
-    dislikeReactionTextArray = [
-        'Loše brate', 'Šta sve neču da pročitam', 'Treba da te streljamo']
-
-    ispovesti = [dbIspovestToObject(
-        i) for i in getIspovesti(page=0)]
-
-    arenaIspovesti = ispovesti
-
-    # return str(ispovestiDicts)
-
-    return render_template('index.html',
-                           ispovesti=ispovesti,
-                           likes=likeReactionTextArray,
-                           dislikes=dislikeReactionTextArray,
-                           arenaIspovesti=arenaIspovesti)
-
-
-@ app.route('/addComment', methods=['POST'])
-def addComment():
-
-    print(request.form['ispovestId'])
-    print(request.form['commentInput'])
-
-    return index()
+def postKomentar(ispovestId, komentar):
+    pass
