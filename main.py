@@ -9,6 +9,7 @@ import db
 import constants
 import helpers
 
+
 app = Flask(__name__)
 # CSRFProtect(app)
 CORS(app)
@@ -34,7 +35,7 @@ def getIspovesti():
                     sum(case when (ispovestreaction.authorid = ? AND ispovestreaction.reaction = 1) then 1 else 0 end) AS timesLiked,
                     sum(case when (ispovestreaction.authorid = ? AND ispovestreaction.reaction = 0) then 1 else 0 end) AS timesDisliked
                 FROM ispovest
-                JOIN ispovestreaction
+                LEFT JOIN ispovestreaction
                 ON ispovest.id = ispovestreaction.ispovestId
                 GROUP BY ispovest.id"""
     ispovestiTuples = db.get_db().cursor().execute(

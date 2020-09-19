@@ -35,6 +35,12 @@ def create_table(conn, create_table_sql):
 def main():
     database = DATABASE
 
+    sql_create_pending_ispovest_table = """ 
+    CREATE TABLE IF NOT EXISTS pendingIspovest(
+        id integer PRIMARY KEY,
+        content text NOT NULL
+    );"""
+
     sql_create_arena_ispovest_table = """ 
     CREATE TABLE IF NOT EXISTS arenaIspovest(
         id integer PRIMARY KEY,
@@ -103,6 +109,7 @@ def main():
         create_table(conn, sql_create_arena_ispovest_table)
         create_table(conn, sql_create_arena_ispovest_reaction_table)
         create_table(conn, sql_create_user_info_table)
+        create_table(conn, sql_create_pending_ispovest_table)
 
     else:
         print("Error! cannot create the database connection.")

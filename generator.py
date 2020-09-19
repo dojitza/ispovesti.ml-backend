@@ -117,10 +117,17 @@ def main():
 
         createIspovestReaction(conn, reaction1)
         createIspovestReaction(conn, reaction2)
-        '''
+
 
         arenaIspovest = ('Bleko haram gereeeeeeeee 1',)
         createArenaIspovest(conn, arenaIspovest)
+
+        '''
+
+        for i in range(50):
+            ispovest = ('Verenik je verio mene i jos '+str(i) +
+                        ' devojki, nisam mogla da verujem!',)
+            ispovestId = createIspovest(conn, ispovest)
 
 
 if __name__ == '__main__':
