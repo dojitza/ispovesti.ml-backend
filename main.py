@@ -95,6 +95,15 @@ def postArenaIspovestReaction(arenaIspovestId):
         return Response(jsonify(reactionId), status=201, mimetype='application/json')
 
 
+@app.route('/api/v1/user', methods=['GET'])
+def getUserInfo():
+    userIdHash = str(request.user_agent) + str(request.remote_addr)
+    userInfo = db.getUserInfo(userIdHash)
+    if (userInfo is None):
+        userInfo = db.createUser(userIdHash)
+    return jsonify(userInfo)
+
+
 @ app.route('/')
 def index():
     return jsonify('use /api/v1/ endpoint to access the rest service')

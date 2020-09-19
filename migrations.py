@@ -83,6 +83,14 @@ def main():
         FOREIGN KEY(arenaIspovestId) REFERENCES arenaIspovest(id)
     );"""
 
+    sql_create_user_info_table = """
+    CREATE TABLE IF NOT EXISTS user(
+        idhash PRIMARYKEY,
+        superlikesLeft integer NOT NULL default 1,
+        arenaIntroCompleted boolean NOT NULL default false
+    )
+    """
+
     # create a database connection
     conn = create_connection(database)
 
@@ -94,6 +102,7 @@ def main():
         create_table(conn, sql_create_komentar_reaction_table)
         create_table(conn, sql_create_arena_ispovest_table)
         create_table(conn, sql_create_arena_ispovest_reaction_table)
+        create_table(conn, sql_create_user_info_table)
 
     else:
         print("Error! cannot create the database connection.")

@@ -32,11 +32,41 @@ def dbArenaIspovestToObject(ispovestTuple):
     }
 
 
+def dbUserInfoToObject(userInfoTuple):
+    return {
+        'idHash': userInfoTuple[0],
+        'superlikesLeft': userInfoTuple[1],
+        'arenaIntroCompleted': userInfoTuple[2],
+    }
+
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
         db = g._database = sqlite3.connect(constants.DATABASE)
     return db
+
+
+def postUserCompletedArenaIntro(userIdHash):
+    sql = """ UPDATE user
+              SET arenaIntroCompleted = true,
+              WHERE user.idHash=?;
+          """
+    cur = get_db().cursor()
+    cur.execute(sql, (userIdHash,))
+    get_db().commit()
+    return cur.lastrowid
+
+
+def postUserUsedSuperLike(userIdHash):
+    sql = """ UPDATE user
+              SET superlikesLeft -= 1,
+              WHERE user.idHash=?;
+          """
+    cur = get_db().cursor()
+    cur.execute(sql, (userIdHash,))
+    get_db().commit()
+    return getUserInfo(userIdHash)
 
 
 def postIspovestReaction(uniqueIdentifierString, reaction, ispovestId):
@@ -110,3 +140,22 @@ def getArenaIspovesti(authorId):
     ispovestiTuples = get_db().cursor().execute(
         sql, (authorId, authorId)).fetchall()
     return [dbArenaIspovestToObject(ispovestTuple) for ispovestTuple in ispovestiTuples]
+
+
+def getUserInfo(userIdHash):
+    sql = """   SELECT *   
+                FROM user
+                WHERE user.idhash = ?
+          """
+    userInfo = get_db().cursor().execute(sql, (userIdHash,)).fetchone()
+    return dbUserInfoToObject(userInfo)
+
+
+def createUser(userIdHash):
+    sql = """ INSERT INTO user(idHash)
+              VALUES(?) 
+          """
+    cur = get_db().cursor()
+    cur.execute(sql, (userIdHash,))
+    get_db().commit()
+    return getUserInfo(userIdHash)
