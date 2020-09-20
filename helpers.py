@@ -7,5 +7,5 @@ def mapReactionStringToConstant(reactionString):
     elif (reactionString == 'dislike'):
         return constants.DISLIKE
     elif (reactionString == 'superlike'):
-        return constants.DISLIKE
+        return constants.SUPERLIKE
     return constants.INVALID
