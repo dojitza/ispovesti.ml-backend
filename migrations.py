@@ -64,17 +64,15 @@ def main():
 
     sql_create_ispovest_reaction_table = """
     CREATE TABLE IF NOT EXISTS ispovestreaction(
-        id integer PRIMARY KEY,
-        authorId integer NOT NULL,
+        authorId integer NOT NULL PRIMARY KEY,
         reaction integer NOT NULL,
-        ispovestId integer NOT NULL,
+        ispovestId integer NOT NULL PRIMARY KEY,
         FOREIGN KEY(ispovestId) REFERENCES ispovest(id)
     );"""
 
     sql_create_komentar_reaction_table = """
     CREATE TABLE IF NOT EXISTS ispovestreaction(
-        id integer PRIMARY KEY,
-        authorId integer NOT NULL,
+        authorId integer PRIMARY KEY,
         reaction integer NOT NULL,
         komentarId integer NOT NULL,
         FOREIGN KEY(komentarId) REFERENCES komentar(id)

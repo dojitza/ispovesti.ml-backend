@@ -56,28 +56,16 @@ def getArenaIspovesti():
     return jsonify(arenaIspovesti)
 
 
-@app.route('/api/v1/ispovesti/<int:ispovestId>/postLike', methods=['POST'])
-def likeIpovest(ispovestId):
-    reaction = db.getReactionToIspovest(
-        str(request.user_agent) + str(request.remote_addr), ispovestId)
-    if (reaction):
-        abort(403)
+@ app.route('/api/v1/ispovesti/<int:ispovestId>/putReaction', methods=['PUT'])
+def putIspovestReaction(ispovestId):
+    reactionString = request.json
+    reactionConstant = helpers.mapReactionStringToConstant(reactionString)
+    success = db.putIspovestReaction(
+        str(request.user_agent) + str(request.remote_addr), reactionConstant, ispovestId)
+    if success:
+        return Response(status=200, mimetype='application/json')
     else:
-        reactionId = db.postIspovestReaction(
-            str(request.user_agent) + str(request.remote_addr), constants.LIKE, ispovestId)
-        return Response(jsonify(reactionId), status=201, mimetype='application/json')
-
-
-@ app.route('/api/v1/ispovesti/<int:ispovestId>/postDislike', methods=['POST'])
-def dislikeIpovest(ispovestId):
-    reaction = db.getReactionToIspovest(
-        str(request.user_agent) + str(request.remote_addr), ispovestId)
-    if (reaction):
         abort(403)
-    else:
-        reactionId = db.postIspovestReaction(
-            str(request.user_agent) + str(request.remote_addr), constants.DISLIKE, ispovestId)
-        return Response(jsonify(reactionId), status=201, mimetype='application/json')
 
 
 @ app.route('/api/v1/arenaIspovesti/<int:arenaIspovestId>/postReaction', methods=['POST'])
@@ -98,7 +86,7 @@ def postArenaIspovestReaction(arenaIspovestId):
 
 @app.route('/api/v1/user', methods=['GET'])
 def getUserInfo():
-    userIdHash = str(request.user_agent) + str(request.remote_addr)
+    userIdHash = hash(str(request.user_agent) + str(request.remote_addr))
     userInfo = db.getUserInfo(userIdHash)
     if (userInfo is None):
         userInfo = db.createUser(userIdHash)

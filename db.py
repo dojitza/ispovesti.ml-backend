@@ -69,10 +69,24 @@ def postUserUsedSuperLike(userIdHash):
     return getUserInfo(userIdHash)
 
 
+def putIspovestReaction(uniqueIdentifierString, reaction, ispovestId):
+    authorId = hash(uniqueIdentifierString)
+    print(reaction, authorId, ispovestId, reaction)
+    sql = """INSERT INTO ispovestreaction (authorId, reaction, ispovestId)
+                VALUES(?, ?, ?)
+                ON CONFLICT(authorId, ispovestId) 
+                DO UPDATE SET reaction=?;"""
+    cur = get_db().cursor()
+    cur.execute(sql, (authorId, reaction, ispovestId, reaction))
+    get_db().commit()
+    print(cur.lastrowid + cur.rowcount)
+    return cur.lastrowid + cur.rowcount
+
+
 def postIspovestReaction(uniqueIdentifierString, reaction, ispovestId):
     authorId = hash(uniqueIdentifierString)
     sql = """ INSERT INTO ispovestreaction(reaction, authorId, ispovestId)
-            VALUES(?,?,?) """
+            VALUES(?, ?, ?) """
     cur = get_db().cursor()
     cur.execute(sql, (reaction, authorId, ispovestId))
     get_db().commit()
@@ -82,7 +96,7 @@ def postIspovestReaction(uniqueIdentifierString, reaction, ispovestId):
 def postArenaIspovestReaction(uniqueIdentifierString, reaction, arenaispovestId):
     authorId = hash(uniqueIdentifierString)
     sql = """ INSERT INTO arenaispovestreaction(reaction, authorId, arenaispovestId)
-            VALUES(?,?,?) """
+            VALUES(?, ?, ?) """
     cur = get_db().cursor()
     cur.execute(sql, (reaction, authorId, arenaispovestId))
     get_db().commit()
@@ -91,7 +105,7 @@ def postArenaIspovestReaction(uniqueIdentifierString, reaction, arenaispovestId)
 
 def getReactionToIspovest(uniqueIdentifierString, ispovestId):
     authorId = hash(uniqueIdentifierString)
-    sql = """SELECT reaction FROM ispovestreaction WHERE authorId=? and ispovestId=?"""
+    sql = """SELECT reaction FROM ispovestreaction WHERE authorId =? and ispovestId =?"""
     reaction = get_db().cursor().execute(sql, (authorId, ispovestId)).fetchone()
     if (reaction):
         return reaction[0]
@@ -101,7 +115,7 @@ def getReactionToIspovest(uniqueIdentifierString, ispovestId):
 
 def getReactionToArenaIspovest(uniqueIdentifierString, ispovestId):
     authorId = hash(uniqueIdentifierString)
-    sql = """SELECT reaction FROM arenaispovestreaction WHERE authorId=? and arenaispovestId=?"""
+    sql = """SELECT reaction FROM arenaispovestreaction WHERE authorId =? and arenaispovestId =?"""
     reaction = get_db().cursor().execute(sql, (authorId, ispovestId)).fetchone()
     if (reaction):
         return reaction[0]
@@ -113,8 +127,8 @@ def getIspovest(ispovestId):
     sql = """   SELECT
                     ispovest.id,
                     ispovest.content,
-                    sum(case when reaction = 1 then 1 else 0 end) AS likes,
-                    sum(case when reaction = 0 then 1 else 0 end) AS dislikes
+                    sum(case when reaction=1 then 1 else 0 end) AS likes,
+                    sum(case when reaction=0 then 1 else 0 end) AS dislikes
                 FROM ispovest
                 JOIN ispovestreaction
                 ON ispovest.id = ispovestreaction.ispovestId
@@ -148,7 +162,10 @@ def getUserInfo(userIdHash):
                 WHERE user.idhash = ?
           """
     userInfo = get_db().cursor().execute(sql, (userIdHash,)).fetchone()
-    return dbUserInfoToObject(userInfo)
+    if userInfo is not None:
+        return dbUserInfoToObject(userInfo)
+    else:
+        return None
 
 
 def createUser(userIdHash):
