@@ -26,6 +26,8 @@ def close_connection(exception):
 
 @app.route('/api/v1/ispovesti', methods=['GET'])
 def getIspovesti():
+    page = request.args['page']
+    print(request.args)
     authorId = hash(str(request.user_agent) + str(request.remote_addr))
     sql = """ SELECT
                     ispovest.id,
@@ -37,9 +39,14 @@ def getIspovesti():
                 FROM ispovest
                 LEFT JOIN ispovestreaction
                 ON ispovest.id = ispovestreaction.ispovestId
-                GROUP BY ispovest.id"""
+                GROUP BY ispovest.id
+                ORDER BY ispovest.id
+                DESC
+                LIMIT 10
+                OFFSET ?*10"""
+
     ispovestiTuples = db.get_db().cursor().execute(
-        sql, (authorId, authorId)).fetchall()
+        sql, (authorId, authorId, page)).fetchall()
     return jsonify([db.dbIspovestToObject(ispovestTuple) for ispovestTuple in ispovestiTuples])
 
 
