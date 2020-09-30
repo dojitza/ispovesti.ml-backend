@@ -2,6 +2,8 @@
 
 env FLASK_APP=main.py FLASK_ENV=development PYTHONHASHSEED=124391405 flask run --host=0.0.0.0
 
+FLASK_APP=main.py FLASK_ENV=development PYTHONHASHSEED=124391405 flask run --host=0.0.0.0 -p 5000
+
 todo:
 
 pagination details of main ispovesti
