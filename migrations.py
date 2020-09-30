@@ -53,6 +53,12 @@ def main():
         content text NOT NULL
     );"""
 
+    sql_create_rejected_ispovest_table = """ 
+    CREATE TABLE IF NOT EXISTS rejectedispovest(
+        id integer PRIMARY KEY,
+        content text NOT NULL
+    );"""
+
     sql_create_komentar_table = """
     CREATE TABLE IF NOT EXISTS komentar(
         id integer PRIMARY KEY,
@@ -108,6 +114,7 @@ def main():
         create_table(conn, sql_create_arena_ispovest_reaction_table)
         create_table(conn, sql_create_user_info_table)
         create_table(conn, sql_create_pending_ispovest_table)
+        create_table(conn, sql_create_rejected_ispovest_table)
 
     else:
         print("Error! cannot create the database connection.")

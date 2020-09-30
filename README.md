@@ -4,7 +4,7 @@ env FLASK_APP=main.py FLASK_ENV=development PYTHONHASHSEED=124391405 flask run -
 
 todo:
 
-pagination of main ispovesti
+pagination details of main ispovesti
 fill db with real ispovesti
 figure out a way to send new generated ispovesti to the server.
 test real time generation on server

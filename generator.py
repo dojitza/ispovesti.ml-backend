@@ -1,6 +1,7 @@
 import sqlite3
 from sqlite3 import Error
 from constants import DATABASE
+import db
 
 
 def create_connection(db_file):
@@ -95,6 +96,15 @@ def createKomentarReaction(conn, reaction):
     return cur.lastrowid
 
 
+def createPendingIspovest(conn, ispovestText):
+    sql = ''' INSERT INTO pendingispovest(content)
+            VALUES(?) '''
+    cur = conn.cursor()
+    cur.execute(sql, (ispovestText,))
+    conn.commit()
+    return cur.lastrowid
+
+
 def main():
     database = DATABASE
 
@@ -118,16 +128,21 @@ def main():
         createIspovestReaction(conn, reaction1)
         createIspovestReaction(conn, reaction2)
 
-
         arenaIspovest = ('Bleko haram gereeeeeeeee 1',)
         createArenaIspovest(conn, arenaIspovest)
-
-        '''
 
         for i in range(50):
             ispovest = ('Verenik je verio mene i jos '+str(i) +
                         ' devojki, nisam mogla da verujem!',)
             ispovestId = createIspovest(conn, ispovest)
+
+        '''
+
+        f = open('stareIspovesti.txt', 'r')
+
+        for line in f:
+            if line != '====================\n':
+                createIspovest(conn, (line.strip(),))
 
 
 if __name__ == '__main__':
