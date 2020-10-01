@@ -20,13 +20,15 @@ def create_connection(db_file):
 
 
 def resetSuperlikes():
-    sql = """
-        UPDATE user
-        SET superlikesLeft = 1,
-      """
-    cur = get_db().cursor()
-    cur.execute(sql, (userIdHash,))
-    get_db().commit()
+    conn = create_connection(constants.DATABASE)
+    with conn:
+        sql = """
+            UPDATE user
+            SET superlikesLeft = 1,
+        """
+        cur = conn.cursor()
+        cur.execute(sql, (userIdHash,))
+        conn.commit()
 
 # pick the best ispovesti from arena and insert them to the main list
 # relegate the rest to the discarded ispovesti table
