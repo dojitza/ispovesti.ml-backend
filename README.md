@@ -6,9 +6,6 @@ FLASK_APP=main.py FLASK_ENV=development PYTHONHASHSEED=124391405 flask run --hos
 
 todo:
 
-pagination details of main ispovesti
-fill db with real ispovesti
-figure out a way to send new generated ispovesti to the server.
 test real time generation on server
 record user finishing arena intro and make a 'dont show this again' checkbox
 comments

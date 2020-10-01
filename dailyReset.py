@@ -13,7 +13,6 @@ def create_connection(db_file):
         conn = sqlite3.connect(db_file)
     except Error as e:
         print(e)
-
     return conn
 
 # set all user's superlikes to 1
@@ -67,8 +66,6 @@ def processArena():
         topIspovesti = [max(processedArenaIspovesti, key=lambda pai: pai[2])]
         for i in topIspovesti:
             processedArenaIspovesti.remove(i)
-        print(topIspovesti)
-        print(processedArenaIspovesti)
 
         # TODO: optimise these queryes when there are multiple ispovesti instead of single commiting
         for i in topIspovesti:
