@@ -24,7 +24,7 @@ def resetSuperlikes():
     with conn:
         sql = """
             UPDATE user
-            SET superlikesLeft = 1,
+            SET superlikesLeft = 1
         """
         cur = conn.cursor()
         cur.execute(sql)
