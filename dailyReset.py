@@ -27,7 +27,7 @@ def resetSuperlikes():
             SET superlikesLeft = 1,
         """
         cur = conn.cursor()
-        cur.execute(sql, (userIdHash,))
+        cur.execute(sql)
         conn.commit()
 
 # pick the best ispovesti from arena and insert them to the main list
