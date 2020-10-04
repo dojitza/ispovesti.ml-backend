@@ -2,11 +2,11 @@
 from flask import Flask, escape, request, jsonify, abort, Response, g
 from flask_cors import CORS
 import os
+import gpt_2_simple as gpt2
 
 import db
 import constants
 import helpers
-
 
 app = Flask(__name__)
 CORS(app)
@@ -19,6 +19,12 @@ def close_connection(exception):
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
+
+
+@app.route('/api/v1/generateIspovest', methods=['GET'])
+def generateIspovest():
+    prefix = request.args['prefix']
+    return jsonify(gptGenerateIspovest(prefix))
 
 
 @app.route('/api/v1/ispovesti', methods=['GET'])
