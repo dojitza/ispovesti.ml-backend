@@ -70,7 +70,7 @@ def main():
 
     sql_create_ispovest_reaction_table = """
     CREATE TABLE IF NOT EXISTS ispovestreaction(
-        authorId integer NOT NULL 
+        authorId integer NOT NULL, 
         reaction integer NOT NULL,
         ispovestId integer NOT NULL,
         PRIMARY KEY(authorId,ispovestId),
