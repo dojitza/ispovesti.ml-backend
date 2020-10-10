@@ -6,20 +6,11 @@ import itertools
 
 # TODO: implement these as transactions / or procedures in sqlite
 
-
-def create_connection(db_file):
-    conn = None
-    try:
-        conn = sqlite3.connect(db_file)
-    except Error as e:
-        print(e)
-    return conn
-
-# set all user's superlikes to 1
+# set all users superlikes to 1
 
 
 def resetSuperlikes():
-    conn = create_connection(constants.DATABASE)
+    conn = db.get_db()
     with conn:
         sql = """
             UPDATE user
@@ -34,7 +25,7 @@ def resetSuperlikes():
 
 
 def processArena():
-    conn = create_connection(constants.DATABASE)
+    conn = db.get_db()
     with conn:
 
         sql = """
@@ -105,7 +96,7 @@ def processArena():
 
 # send the next batch to the arena
 def fillArena():
-    conn = create_connection(constants.DATABASE)
+    conn = db.get_db()
     with conn:
         sql = '''
                 SELECT id, content

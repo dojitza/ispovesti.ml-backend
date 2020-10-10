@@ -1,7 +1,8 @@
 import sqlite3
 import datetime
-from ispovest import ispovest
 from flask import g
+from flask import current_app as app
+
 import constants
 
 
@@ -41,10 +42,42 @@ def dbUserInfoToObject(userInfoTuple):
 
 
 def get_db():
+    conn = None
+    try:
+        conn = sqlite3.connect(constants.DATABASE)
+    except Error as e:
+        print(e)
+    return conn
+
+
+def get_flask_db():
     db = getattr(g, '_database', None)
     if db is None:
         db = g._database = sqlite3.connect(constants.DATABASE)
     return db
+
+
+def getIspovesti(reactionAuthorId, page):
+    sql = """ SELECT
+                ispovest.id,
+                ispovest.content,
+                sum(case when reaction = 1 then 1 else 0 end) AS likes,
+                sum(case when reaction = 0 then 1 else 0 end) AS dislikes,
+                sum(case when (ispovestreaction.authorid = ? AND ispovestreaction.reaction = 1) then 1 else 0 end) AS timesLiked,
+                sum(case when (ispovestreaction.authorid = ? AND ispovestreaction.reaction = 0) then 1 else 0 end) AS timesDisliked
+            FROM ispovest
+            LEFT JOIN ispovestreaction
+            ON ispovest.id = ispovestreaction.ispovestId
+            GROUP BY ispovest.id
+            ORDER BY ispovest.id
+            DESC
+            LIMIT 10
+            OFFSET ?*10"""
+
+    ispovestiTuples = get_flask_db().cursor().execute(
+        sql, (reactionAuthorId, reactionAuthorId, page)).fetchall()
+
+    return [dbIspovestToObject(ispovestTuple) for ispovestTuple in ispovestiTuples]
 
 
 def postUserCompletedArenaIntro(userIdHash):
@@ -52,9 +85,9 @@ def postUserCompletedArenaIntro(userIdHash):
               SET arenaIntroCompleted = true,
               WHERE user.idHash=?;
           """
-    cur = get_db().cursor()
+    cur = get_flask_db().cursor()
     cur.execute(sql, (userIdHash,))
-    get_db().commit()
+    get_flask_db().commit()
     return cur.lastrowid
 
 
@@ -63,9 +96,9 @@ def postUserUsedSuperLike(userIdHash):
               SET superlikesLeft -= 1,
               WHERE user.idHash=?;
           """
-    cur = get_db().cursor()
+    cur = get_flask_db().cursor()
     cur.execute(sql, (userIdHash,))
-    get_db().commit()
+    get_flask_db().commit()
     return getUserInfo(userIdHash)
 
 
@@ -76,9 +109,9 @@ def putIspovestReaction(uniqueIdentifierString, reaction, ispovestId):
                 VALUES(?, ?, ?)
                 ON CONFLICT(authorId, ispovestId) 
                 DO UPDATE SET reaction=?;"""
-    cur = get_db().cursor()
+    cur = get_flask_db().cursor()
     cur.execute(sql, (authorId, reaction, ispovestId, reaction))
-    get_db().commit()
+    get_flask_db().commit()
     print(cur.lastrowid + cur.rowcount)
     return cur.lastrowid + cur.rowcount
 
@@ -87,9 +120,9 @@ def postIspovestReaction(uniqueIdentifierString, reaction, ispovestId):
     authorId = hash(uniqueIdentifierString)
     sql = """ INSERT INTO ispovestreaction(reaction, authorId, ispovestId)
             VALUES(?, ?, ?) """
-    cur = get_db().cursor()
+    cur = get_flask_db().cursor()
     cur.execute(sql, (reaction, authorId, ispovestId))
-    get_db().commit()
+    get_flask_db().commit()
     return cur.lastrowid
 
 
@@ -97,16 +130,17 @@ def postArenaIspovestReaction(uniqueIdentifierString, reaction, arenaispovestId)
     authorId = hash(uniqueIdentifierString)
     sql = """ INSERT INTO arenaispovestreaction(reaction, authorId, arenaispovestId)
             VALUES(?, ?, ?) """
-    cur = get_db().cursor()
+    cur = get_flask_db().cursor()
     cur.execute(sql, (reaction, authorId, arenaispovestId))
-    get_db().commit()
+    get_flask_db().commit()
     return cur.lastrowid
 
 
 def getReactionToIspovest(uniqueIdentifierString, ispovestId):
     authorId = hash(uniqueIdentifierString)
     sql = """SELECT reaction FROM ispovestreaction WHERE authorId =? and ispovestId =?"""
-    reaction = get_db().cursor().execute(sql, (authorId, ispovestId)).fetchone()
+    reaction = get_flask_db().cursor().execute(
+        sql, (authorId, ispovestId)).fetchone()
     if (reaction):
         return reaction[0]
     else:
@@ -116,7 +150,8 @@ def getReactionToIspovest(uniqueIdentifierString, ispovestId):
 def getReactionToArenaIspovest(uniqueIdentifierString, ispovestId):
     authorId = hash(uniqueIdentifierString)
     sql = """SELECT reaction FROM arenaispovestreaction WHERE authorId =? and arenaispovestId =?"""
-    reaction = get_db().cursor().execute(sql, (authorId, ispovestId)).fetchone()
+    reaction = get_flask_db().cursor().execute(
+        sql, (authorId, ispovestId)).fetchone()
     if (reaction):
         return reaction[0]
     else:
@@ -134,7 +169,7 @@ def getIspovest(ispovestId):
                 ON ispovest.id = ispovestreaction.ispovestId
                 WHERE ispovest.id = ?
                 GROUP BY ispovest.id """
-    ispovest = get_db().cursor().execute(sql, (ispovestId,)).fetchone()
+    ispovest = get_flask_db().cursor().execute(sql, (ispovestId,)).fetchone()
     parsedIspovest = dbIspovestToObject(ispovest)
     parsedKomentari = getKomentari(ispovestId)
     parsedIspovest['comments'] = parsedKomentari
@@ -151,7 +186,7 @@ def getArenaIspovesti(authorId):
                 GROUP BY arenaispovest.id
 				HAVING (sum(arenaIspovestReaction.authorid = ?) < 1)
                 OR (sum(arenaIspovestReaction.authorid = ?) is NULL)"""
-    ispovestiTuples = get_db().cursor().execute(
+    ispovestiTuples = get_flask_db().cursor().execute(
         sql, (authorId, authorId)).fetchall()
     return [dbArenaIspovestToObject(ispovestTuple) for ispovestTuple in ispovestiTuples]
 
@@ -161,7 +196,7 @@ def getUserInfo(userIdHash):
                 FROM user
                 WHERE user.idhash = ?
           """
-    userInfo = get_db().cursor().execute(sql, (userIdHash,)).fetchone()
+    userInfo = get_flask_db().cursor().execute(sql, (userIdHash,)).fetchone()
     if userInfo is not None:
         return dbUserInfoToObject(userInfo)
     else:
@@ -172,7 +207,7 @@ def createUser(userIdHash):
     sql = """ INSERT INTO user(idHash)
               VALUES(?) 
           """
-    cur = get_db().cursor()
+    cur = get_flask_db().cursor()
     cur.execute(sql, (userIdHash,))
-    get_db().commit()
+    get_flask_db().commit()
     return getUserInfo(userIdHash)
