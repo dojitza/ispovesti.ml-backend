@@ -1,6 +1,6 @@
 flask
 flask-cors
 flask-wtf
-celery
+pika
 gpt-2-simple
 tensorflow<2

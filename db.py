@@ -30,14 +30,17 @@ def dbArenaIspovestToObject(ispovestTuple):
     return {
         'id': ispovestTuple[0],
         'text': ispovestTuple[1],
+        'likes': ispovestTuple[2],
+        'dislikes': ispovestTuple[3],
+        'timesLiked': ispovestTuple[4],
+        'timesDisliked': ispovestTuple[5],
     }
 
 
 def dbUserInfoToObject(userInfoTuple):
     return {
         'idHash': userInfoTuple[0],
-        'superlikesLeft': userInfoTuple[1],
-        'arenaIntroCompleted': userInfoTuple[2],
+        'lastGenerationTime': userInfoTuple[1],
     }
 
 
@@ -107,12 +110,11 @@ def putIspovestReaction(uniqueIdentifierString, reaction, ispovestId):
     print(reaction, authorId, ispovestId, reaction)
     sql = """INSERT INTO ispovestreaction (authorId, reaction, ispovestId)
                 VALUES(?, ?, ?)
-                ON CONFLICT(authorId, ispovestId) 
+                ON CONFLICT(authorId, ispovestId)
                 DO UPDATE SET reaction=?;"""
     cur = get_flask_db().cursor()
     cur.execute(sql, (authorId, reaction, ispovestId, reaction))
     get_flask_db().commit()
-    print(cur.lastrowid + cur.rowcount)
     return cur.lastrowid + cur.rowcount
 
 
@@ -134,6 +136,19 @@ def postArenaIspovestReaction(uniqueIdentifierString, reaction, arenaispovestId)
     cur.execute(sql, (reaction, authorId, arenaispovestId))
     get_flask_db().commit()
     return cur.lastrowid
+
+
+def putArenaIspovestReaction(uniqueIdentifierString, reaction, arenaIspovestId):
+    authorId = hash(uniqueIdentifierString)
+    sql = """INSERT INTO arenaispovestreaction (authorId, reaction, arenaIspovestId)
+                VALUES(?, ?, ?)
+                ON CONFLICT(authorId, arenaIspovestId)
+                DO UPDATE SET reaction=?;"""
+    cur = get_flask_db().cursor()
+    cur.execute(sql, (authorId, reaction, arenaIspovestId, reaction))
+    get_flask_db().commit()
+    print(cur.lastrowid + cur.rowcount)
+    return cur.lastrowid + cur.rowcount
 
 
 def getReactionToIspovest(uniqueIdentifierString, ispovestId):
@@ -176,23 +191,32 @@ def getIspovest(ispovestId):
     return parsedIspovest
 
 
-def getArenaIspovesti(authorId):
+def getArenaIspovesti(reactionAuthorId, page):
+
     sql = """   SELECT
                     arenaispovest.id,
-                    arenaispovest.content
+                    arenaispovest.content,
+                    sum(case when reaction = 1 then 1 else 0 end) AS likes,
+                    sum(case when reaction = 0 then 1 else 0 end) AS dislikes,
+                    sum(case when (arenaispovestreaction.authorid = ? AND arenaispovestreaction.reaction = 1) then 1 else 0 end) AS timesLiked,
+                    sum(case when (arenaispovestreaction.authorid = ? AND arenaispovestreaction.reaction = 0) then 1 else 0 end) AS timesDisliked
                 FROM arenaispovest
                 LEFT JOIN arenaIspovestReaction
                 ON arenaispovest.id = arenaispovestreaction.arenaIspovestId
                 GROUP BY arenaispovest.id
-				HAVING (sum(arenaIspovestReaction.authorid = ?) < 1)
-                OR (sum(arenaIspovestReaction.authorid = ?) is NULL)"""
+                ORDER BY arenaispovest.id
+                DESC
+                LIMIT 10
+                OFFSET ?*10
+				"""
+
     ispovestiTuples = get_flask_db().cursor().execute(
-        sql, (authorId, authorId)).fetchall()
+        sql, (reactionAuthorId, reactionAuthorId, page)).fetchall()
     return [dbArenaIspovestToObject(ispovestTuple) for ispovestTuple in ispovestiTuples]
 
 
 def getUserInfo(userIdHash):
-    sql = """   SELECT *   
+    sql = """   SELECT *
                 FROM user
                 WHERE user.idhash = ?
           """
@@ -205,9 +229,28 @@ def getUserInfo(userIdHash):
 
 def createUser(userIdHash):
     sql = """ INSERT INTO user(idHash)
-              VALUES(?) 
+              VALUES(?)
           """
     cur = get_flask_db().cursor()
     cur.execute(sql, (userIdHash,))
     get_flask_db().commit()
     return getUserInfo(userIdHash)
+
+
+def getLastGenTimestamp(userIdHash):
+    userInfo = getUserInfo(userIdHash)
+    if userInfo is not None:
+        return userInfo['lastGenerationTime']
+    else:
+        return 0
+
+
+def markGenTimestamp(userIdHash):
+    sql = """INSERT INTO user (idhash,lastGenerationTime)
+            VALUES(?, strftime('%s','now'))
+            ON CONFLICT(idhash)
+            DO UPDATE SET lastGenerationTime=strftime('%s','now');"""
+    cur = get_flask_db().cursor()
+    cur.execute(sql, (userIdHash,))
+    get_flask_db().commit()
+    return cur.lastrowid + cur.rowcount

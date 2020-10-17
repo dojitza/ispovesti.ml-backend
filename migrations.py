@@ -87,19 +87,25 @@ def main():
 
     sql_create_arena_ispovest_reaction_table = """
     CREATE TABLE IF NOT EXISTS arenaispovestreaction(
-        id integer PRIMARY KEY,
-        authorId integer NOT NULL,
+        authorId integer NOT NULL, 
         reaction integer NOT NULL,
         arenaIspovestId integer NOT NULL,
+        PRIMARY KEY(authorId, arenaIspovestId),
         FOREIGN KEY(arenaIspovestId) REFERENCES arenaIspovest(id)
     );"""
 
     sql_create_user_info_table = """
     CREATE TABLE IF NOT EXISTS user(
-        idhash PRIMARYKEY,
-        superlikesLeft integer NOT NULL default 1,
-        arenaIntroCompleted boolean NOT NULL default false
-    )
+        idhash PRIMARY KEY,
+        lastGenerationTime integer 
+    );
+    """
+
+    sql_create_generated_ispovest_table = """
+        CREATE TABLE IF NOT EXISTS generatedispovest(
+            id PRIMARY KEY,
+            content text NOT NULL 
+        )
     """
 
     # create a database connection
@@ -116,6 +122,7 @@ def main():
         create_table(conn, sql_create_user_info_table)
         create_table(conn, sql_create_pending_ispovest_table)
         create_table(conn, sql_create_rejected_ispovest_table)
+        create_table(conn, sql_create_generated_ispovest_table)
 
     else:
         print("Error! cannot create the database connection.")
