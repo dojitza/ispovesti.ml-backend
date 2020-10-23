@@ -25,22 +25,38 @@ def close_connection(exception):
 @app.route('/api/v1/generateIspovest', methods=['GET'])
 def generateIspovest():
     prefix = request.args['prefix']
-    authorId = hash(str(request.remote_addr))
-
-    lastGenTimestamp = db.getLastGenTimestamp(authorId)
+    authorIdHash = hash(str(request.remote_addr))
+    lastGenTimestamp = db.getLastGenTimestamp(authorIdHash)
     timeDifference = int(time()) - lastGenTimestamp
     if timeDifference > constants.GENERATION_THROTTLE_THRESHOLD:
-        db.markGenTimestamp(authorId)
-        return jsonify(clientGenerateIspovest(prefix))
+        db.markGenTimestamp(authorIdHash)
+        ispovestText = clientGenerateIspovest(prefix)
+        ispovestRecord = db.addGeneratedIspovest(ispovestText, authorIdHash)
+        ispovestRecord.pop('authorIdHash', None)
+        return jsonify(ispovestRecord)
     else:
-        return jsonify("You need to wait " + str(30 - timeDifference) + " more seconds before attempting another generation")
+        return jsonify({'id': None, 'text': "You need to wait " + str(30 - timeDifference) + " more seconds before attempting another generation"})
+
+
+@app.route('/api/v1/publishIspovest', methods=['POST'])
+def publishIspovest():
+    ispovestId = request.args['ispovestId']
+    authorName = request.args['authorName']
+    authorName = authorName if authorName != "" else "Anonimus"
+    authorIdHash = hash(str(request.remote_addr))
+    published = db.publishGeneratedIspovest(
+        ispovestId, authorName, authorIdHash)
+    if (published):
+        return Response(status=201, mimetype='application/json')
+    else:
+        abort(403)
 
 
 @app.route('/api/v1/ispovesti', methods=['GET'])
 def getIspovesti():
     page = request.args['page']
-    authorId = hash(str(request.user_agent) + str(request.remote_addr))
-    ispovesti = db.getIspovesti(authorId, page)
+    authorIdHash = hash(str(request.user_agent) + str(request.remote_addr))
+    ispovesti = db.getIspovesti(authorIdHash, page)
     return jsonify(ispovesti)
 
 
@@ -53,8 +69,8 @@ def getIspovest(ispovestId):
 @app.route('/api/v1/arenaIspovesti', methods=['GET'])
 def getArenaIspovesti():
     page = request.args['page']
-    authorId = hash(str(request.user_agent) + str(request.remote_addr))
-    arenaIspovesti = db.getArenaIspovesti(authorId, page)
+    authorIdHash = hash(str(request.user_agent) + str(request.remote_addr))
+    arenaIspovesti = db.getArenaIspovesti(authorIdHash, page)
     return jsonify(arenaIspovesti)
 
 
@@ -84,7 +100,7 @@ def putArenaIspovestReaction(arenaIspovestId):
 
 @app.route('/api/v1/user', methods=['GET'])
 def getUserInfo():
-    userIdHash = hash(str(request.user_agent) + str(request.remote_addr))
+    userIdHash = hash(str(request.remote_addr))
     userInfo = db.getUserInfo(userIdHash)
     if (userInfo is None):
         userInfo = db.createUser(userIdHash)

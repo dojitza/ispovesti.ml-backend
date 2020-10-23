@@ -3,3 +3,7 @@ __pycache__/*
 venv/*
 checkpoint/*
 database.db
+todo.txt
+testRabbitmqServer.py
+testServer.py
+

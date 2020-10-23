@@ -45,6 +45,7 @@ def main():
     CREATE TABLE IF NOT EXISTS arenaIspovest(
         id integer PRIMARY KEY,
         content text NOT NULL
+        authorName text NOT NULL default "Anonimus"
     );"""
 
     sql_create_ispovest_table = """ 
@@ -97,14 +98,16 @@ def main():
     sql_create_user_info_table = """
     CREATE TABLE IF NOT EXISTS user(
         idhash PRIMARY KEY,
-        lastGenerationTime integer 
+        lastGenerationTime integer,
+        lastPublishTime integer
     );
     """
 
     sql_create_generated_ispovest_table = """
         CREATE TABLE IF NOT EXISTS generatedispovest(
-            id PRIMARY KEY,
-            content text NOT NULL 
+            id integer PRIMARY KEY,
+            content text NOT NULL,
+            authorId integer
         )
     """
 
