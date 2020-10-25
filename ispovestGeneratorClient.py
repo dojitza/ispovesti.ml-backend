@@ -4,22 +4,15 @@ import constants
 import pika
 
 
-def generateIspovest(prefix):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((constants.GENERATOR_HOST, constants.GENERATOR_PORT))
-        s.sendall(bytes(prefix, 'UTF-8'))
-        data = s.recv(1024)
-    return data
-
-
 class IspovestGenerationRpcClient(object):
-    def __init__(self):
+    def __init__(self, ispovestId):
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(host='localhost'))
 
         self.channel = self.connection.channel()
 
-        result = self.channel.queue_declare(queue='', exclusive=True)
+        result = self.channel.queue_declare(
+            queue='', exclusive=True)
         self.callback_queue = result.method.queue
 
         self.channel.basic_consume(
@@ -36,7 +29,7 @@ class IspovestGenerationRpcClient(object):
         self.corr_id = str(uuid.uuid4())
         self.channel.basic_publish(
             exchange='',
-            routing_key='ispovestGeneration',
+            routing_key=constants.GENERATION_QUEUE_NAME,
             properties=pika.BasicProperties(
                 reply_to=self.callback_queue,
                 correlation_id=self.corr_id,
@@ -47,7 +40,29 @@ class IspovestGenerationRpcClient(object):
         return self.response.decode('UTF-8')
 
 
-def generateIspovestAlt(prefix):
-    ispovestGenerationRpcClient = IspovestGenerationRpcClient()
+def generateIspovest(prefix, ispovestId):
+    ispovestGenerationRpcClient = IspovestGenerationRpcClient(ispovestId)
     response = ispovestGenerationRpcClient.call(prefix)
     return response
+
+
+def getQueueLength():
+
+    params = pika.ConnectionParameters(
+        host='localhost',
+        port=5672,
+        credentials=pika.credentials.PlainCredentials('guest', 'guest'),
+    )
+
+    # Open a connection to RabbitMQ on localhost using all default parameters
+    connection = pika.BlockingConnection(parameters=params)
+
+    # Open the channel
+    channel = connection.channel()
+
+    # Re-declare the queue with passive flag
+    res = channel.queue_declare(
+        queue=constants.GENERATION_QUEUE_NAME,
+        passive=True
+    )
+    return(res.method.message_count)

@@ -353,3 +353,27 @@ def publishGeneratedIspovest(ispovestId, authorName, authorIdHash):
     get_flask_db().commit()
     markPubTimestamp(authorIdHash)
     return True
+
+
+def getGenerationQueueLength():
+    sql = """SELECT queueLength
+            FROM queueLength
+        """
+    queueLength = get_flask_db().cursor().execute(sql).fetchone()
+    return queueLength
+
+
+def increseGenerationQueueLength():
+    sql = """UPDATE queueLength SET queueLength=queueLength+1"""
+    cur = get_flask_db().cursor()
+    cur.execute(sql)
+    get_flask_db().commit()
+    return cur.lastrowid + cur.rowcount
+
+
+def decreaseGenerationQueueLength():
+    sql = """UPDATE queueLength SET queueLength=queueLength-1"""
+    cur = get_flask_db().cursor()
+    cur.execute(sql)
+    get_flask_db().commit()
+    return cur.lastrowid + cur.rowcount

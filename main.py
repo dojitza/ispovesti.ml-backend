@@ -7,7 +7,8 @@ from time import time
 import db
 import constants
 import helpers
-from ispovestGeneratorClient import generateIspovestAlt as clientGenerateIspovest
+import ispovestGeneratorClient
+
 
 app = Flask(__name__)
 CORS(app)
@@ -30,7 +31,12 @@ def generateIspovest():
     timeDifference = int(time()) - lastGenTimestamp
     if timeDifference > constants.GENERATION_THROTTLE_THRESHOLD:
         db.markGenTimestamp(authorIdHash)
-        ispovestText = clientGenerateIspovest(prefix)
+        print('received: ' + prefix)
+        db.increseGenerationQueueLength()
+        ispovestText = ispovestGeneratorClient.generateIspovest(
+            prefix, authorIdHash)
+        db.decreaseGenerationQueueLength()
+        print('sending: ' + ispovestText)
         ispovestRecord = db.addGeneratedIspovest(ispovestText, authorIdHash)
         ispovestRecord.pop('authorIdHash', None)
         return jsonify(ispovestRecord)
@@ -50,6 +56,11 @@ def publishIspovest():
         return Response(status=201, mimetype='application/json')
     else:
         abort(403)
+
+
+@app.route('/api/v1/queueLength', methods=['GET'])
+def getQueueLength():
+    return jsonify(db.getGenerationQueueLength())
 
 
 @app.route('/api/v1/ispovesti', methods=['GET'])
