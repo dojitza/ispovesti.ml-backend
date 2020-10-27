@@ -112,8 +112,8 @@ def main():
     sql_create_user_info_table = """
     CREATE TABLE IF NOT EXISTS user(
         idhash PRIMARY KEY,
-        lastGenerationTime integer,
-        lastPublishTime integer
+        lastGenerationTime integer NOT NULL DEFAULT 0,
+        lastPublishTime integer NOT NULL DEFAULT 0
     );
     """
     sql_create_queue_length_table = """
