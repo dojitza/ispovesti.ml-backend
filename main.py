@@ -3,6 +3,7 @@ from flask import Flask, escape, request, jsonify, abort, Response, g
 from flask_cors import CORS
 import os
 from time import time
+from threading import Timer
 
 import db
 import constants
@@ -29,13 +30,27 @@ def generateIspovest():
     authorIdHash = hash(str(request.remote_addr))
     lastGenTimestamp = db.getLastGenTimestamp(authorIdHash)
     timeDifference = int(time()) - lastGenTimestamp
+
     if timeDifference > constants.GENERATION_THROTTLE_THRESHOLD:
         db.markGenTimestamp(authorIdHash)
         print('received: ' + prefix)
         db.increseGenerationQueueLength()
+
+        queueLength = db.getGenerationQueueLength()
+
+        def timerTimeout():
+            with app.app_context():
+                db.decreaseGenerationQueueLength()
+
+        timeoutTimer = Timer(queueLength*600, timerTimeout, ())
+        timeoutTimer.start()
+
         ispovestText = ispovestGeneratorClient.generateIspovest(
             prefix, authorIdHash)
+
+        timeoutTimer.cancel()
         db.decreaseGenerationQueueLength()
+
         print('sending: ' + ispovestText)
         ispovestRecord = db.addGeneratedIspovest(ispovestText, authorIdHash)
         ispovestRecord.pop('authorIdHash', None)
