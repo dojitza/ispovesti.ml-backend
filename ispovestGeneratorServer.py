@@ -10,6 +10,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 sess = gpt2.start_tf_sess()
 gpt2.load_gpt2(sess, run_name='run1')
 
+os.nice(10)
+
 
 def generateIspovest(prefix):
     text = gpt2.generate(sess,

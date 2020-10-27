@@ -30,6 +30,15 @@ FLASK_APP=main.py FLASK_ENV=development PYTHONHASHSEED=124391405 flask run --hos
 env FLASK_APP=main.py FLASK_ENV=development PYTHONHASHSEED=124391405 flask run --host=0.0.0.0
 ```
 
+## gunicorn
+
+Note the high timeout value. It is required because of the long time it takes
+for an ispovest to be generated
+
+```
+gunicorn main:app --bind 0.0.0.0:8080 --timeout 86400
+```
+
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
