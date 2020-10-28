@@ -359,7 +359,7 @@ def getGenerationQueueLength():
     sql = """SELECT queueLength
             FROM queueLength
         """
-    queueLength = get_flask_db().cursor().execute(sql).fetchone()
+    queueLength, = get_flask_db().cursor().execute(sql).fetchone()
     return queueLength
 
 

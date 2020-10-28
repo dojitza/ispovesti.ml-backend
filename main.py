@@ -42,7 +42,7 @@ def generateIspovest():
             with app.app_context():
                 db.decreaseGenerationQueueLength()
 
-        timeoutTimer = Timer(queueLength*600, timerTimeout, ())
+        timeoutTimer = Timer(queueLength*600, timerTimeout)
         timeoutTimer.start()
 
         ispovestText = ispovestGeneratorClient.generateIspovest(
