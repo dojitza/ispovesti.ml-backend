@@ -15,7 +15,7 @@ os.nice(10)
 
 def generateIspovest(prefix):
     text = gpt2.generate(sess,
-                         length=256,
+                         length=128,
                          prefix=prefix,
                          temperature=0.7,
                          nsamples=1,
