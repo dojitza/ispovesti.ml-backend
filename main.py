@@ -34,7 +34,6 @@ def generateIspovest():
     if timeDifference > constants.GENERATION_THROTTLE_THRESHOLD:
         db.markGenTimestamp(authorIdHash)
         print('received: ' + prefix)
-        db.increseGenerationQueueLength()
 
         started = ispovestGeneratorClient.generateIspovest(
             prefix, authorIdHash)
@@ -54,7 +53,6 @@ def getGeneratedIspovest():
     authorIdHash = hash(str(request.user_agent) + str(request.remote_addr))
     ispovestText = ispovestGeneratorClient.pollGeneratedIspovest(authorIdHash)
     if ispovestText is not None:
-        db.decreaseGenerationQueueLength()
         print('sending: ' + ispovestText)
         ispovestRecord = db.addGeneratedIspovest(ispovestText, authorIdHash)
         ispovestRecord.pop('authorIdHash', None)
