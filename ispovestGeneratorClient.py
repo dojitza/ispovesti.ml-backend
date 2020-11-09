@@ -2,10 +2,13 @@ import uuid
 import socket
 import constants
 import pika
+import collections
+
+clientDict = collections.OrderedDict()
 
 
-class IspovestGenerationRpcClient(object):
-    def __init__(self, ispovestId):
+class IspovestGenerationClient(object):
+    def __init__(self):
         self.connection = pika.BlockingConnection(
             pika.ConnectionParameters(host='localhost'))
 
@@ -24,7 +27,7 @@ class IspovestGenerationRpcClient(object):
         if self.corr_id == props.correlation_id:
             self.response = body
 
-    def call(self, prefix):
+    def generate(self, prefix):
         self.response = None
         self.corr_id = str(uuid.uuid4())
         self.channel.basic_publish(
@@ -35,34 +38,44 @@ class IspovestGenerationRpcClient(object):
                 correlation_id=self.corr_id,
             ),
             body=prefix)
-        while self.response is None:
-            self.connection.process_data_events()
-        return self.response.decode('UTF-8')
+        # todo if not started return false
+        return True
+
+    def poll(self):
+        self.connection.process_data_events()
+        if self.response is not None:
+            return self.response.decode('UTF-8')
+        else:
+            return None
 
 
-def generateIspovest(prefix, ispovestId):
-    ispovestGenerationRpcClient = IspovestGenerationRpcClient(ispovestId)
-    response = ispovestGenerationRpcClient.call(prefix)
-    return response
+def generateIspovest(prefix, authorIdHash):
+    ispovestGenerationClient = IspovestGenerationClient()
+    clientDict[authorIdHash] = ispovestGenerationClient
+    started = ispovestGenerationClient.generate(prefix)
+    return started
+
+
+"""
+returns ispovest text if finished, none if not finished
+"""
+
+
+def pollGeneratedIspovest(authorIdHash):
+    try:
+        ispovestGenerationClient = clientDict[authorIdHash]
+        retval = ispovestGenerationClient.poll()
+        if retval is not None:
+            clientDict.pop(authorIdHash, None)
+        return retval
+    except KeyError:
+        print('nope')
+        return None
 
 
 def getQueueLength():
+    return len(clientDict.keys())
 
-    params = pika.ConnectionParameters(
-        host='localhost',
-        port=5672,
-        credentials=pika.credentials.PlainCredentials('guest', 'guest'),
-    )
 
-    # Open a connection to RabbitMQ on localhost using all default parameters
-    connection = pika.BlockingConnection(parameters=params)
-
-    # Open the channel
-    channel = connection.channel()
-
-    # Re-declare the queue with passive flag
-    res = channel.queue_declare(
-        queue=constants.GENERATION_QUEUE_NAME,
-        passive=True
-    )
-    return(res.method.message_count)
+def getQueuePosition(authorIdHash):
+    return list(clientDict.keys()).index(authorIdHash)

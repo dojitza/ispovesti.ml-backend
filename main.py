@@ -24,10 +24,10 @@ def close_connection(exception):
         db.close()
 
 
-@app.route('/api/v1/generateIspovest', methods=['GET'])
+@app.route('/api/v1/generateIspovest', methods=['POST'])
 def generateIspovest():
-    prefix = request.args['prefix']
-    authorIdHash = hash(str(request.remote_addr))
+    prefix = request.json['prefix']
+    authorIdHash = hash(str(request.user_agent) + str(request.remote_addr))
     lastGenTimestamp = db.getLastGenTimestamp(authorIdHash)
     timeDifference = int(time()) - lastGenTimestamp
 
@@ -36,35 +36,39 @@ def generateIspovest():
         print('received: ' + prefix)
         db.increseGenerationQueueLength()
 
-        queueLength = db.getGenerationQueueLength()
-
-        def timerTimeout():
-            with app.app_context():
-                db.decreaseGenerationQueueLength()
-
-        timeoutTimer = Timer(queueLength*600, timerTimeout)
-        timeoutTimer.start()
-
-        ispovestText = ispovestGeneratorClient.generateIspovest(
+        started = ispovestGeneratorClient.generateIspovest(
             prefix, authorIdHash)
 
-        timeoutTimer.cancel()
-        db.decreaseGenerationQueueLength()
+        if started:
+            return Response(200)
+        else:
+            # todo if and when started is returned as False, change this to reflect the reason of it being false
+            abort(500)
 
+    else:
+        return jsonify({'id': None, 'text': "You need to wait " + str(30 - timeDifference) + " more seconds before attempting another generation"})
+
+
+@app.route('/api/v1/generateIspovest', methods=['GET'])
+def getGeneratedIspovest():
+    authorIdHash = hash(str(request.user_agent) + str(request.remote_addr))
+    ispovestText = ispovestGeneratorClient.pollGeneratedIspovest(authorIdHash)
+    if ispovestText is not None:
+        db.decreaseGenerationQueueLength()
         print('sending: ' + ispovestText)
         ispovestRecord = db.addGeneratedIspovest(ispovestText, authorIdHash)
         ispovestRecord.pop('authorIdHash', None)
         return jsonify(ispovestRecord)
     else:
-        return jsonify({'id': None, 'text': "You need to wait " + str(30 - timeDifference) + " more seconds before attempting another generation"})
+        return jsonify({'queuePosition': ispovestGeneratorClient.getQueuePosition(authorIdHash)})
 
 
-@app.route('/api/v1/publishIspovest', methods=['POST'])
+@ app.route('/api/v1/publishIspovest', methods=['POST'])
 def publishIspovest():
-    ispovestId = request.args['ispovestId']
-    authorName = request.args['authorName']
+    ispovestId = request.json['ispovestId']
+    authorName = request.json['authorName']
     authorName = authorName if authorName != "" else "Anonimus"
-    authorIdHash = hash(str(request.remote_addr))
+    authorIdHash = hash(str(request.user_agent) + str(request.remote_addr))
     published = db.publishGeneratedIspovest(
         ispovestId, authorName, authorIdHash)
     if (published):
@@ -73,12 +77,18 @@ def publishIspovest():
         abort(403)
 
 
-@app.route('/api/v1/queueLength', methods=['GET'])
+@ app.route('/api/v1/queueLength', methods=['GET'])
 def getQueueLength():
-    return jsonify(db.getGenerationQueueLength())
+    return jsonify(ispovestGeneratorClient.getQueueLength())
 
 
-@app.route('/api/v1/ispovesti', methods=['GET'])
+@ app.route('/api/v1/queuePosition/', methods=['GET'])
+def getQueuePosition():
+    authorIdHash = hash(str(request.user_agent) + str(request.remote_addr))
+    return jsonify(ispovestGeneratorClient.getQueuePosition(authorIdHash))
+
+
+@ app.route('/api/v1/ispovesti', methods=['GET'])
 def getIspovesti():
     page = request.args['page']
     authorIdHash = hash(str(request.user_agent) + str(request.remote_addr))
@@ -86,13 +96,13 @@ def getIspovesti():
     return jsonify(ispovesti)
 
 
-@app.route('/api/v1/ispovesti/<int:ispovestId>', methods=['GET'])
+@ app.route('/api/v1/ispovesti/<int:ispovestId>', methods=['GET'])
 def getIspovest(ispovestId):
     ispovest = db.getIspovest(ispovestId)
     return jsonify(ispovest)
 
 
-@app.route('/api/v1/arenaIspovesti', methods=['GET'])
+@ app.route('/api/v1/arenaIspovesti', methods=['GET'])
 def getArenaIspovesti():
     page = request.args['page']
     authorIdHash = hash(str(request.user_agent) + str(request.remote_addr))
@@ -100,7 +110,7 @@ def getArenaIspovesti():
     return jsonify(arenaIspovesti)
 
 
-@app.route('/api/v1/ispovesti/<int:ispovestId>/putReaction', methods=['PUT'])
+@ app.route('/api/v1/ispovesti/<int:ispovestId>/putReaction', methods=['PUT'])
 def putIspovestReaction(ispovestId):
     reactionString = request.json
     reactionConstant = helpers.mapReactionStringToConstant(reactionString)
@@ -112,7 +122,7 @@ def putIspovestReaction(ispovestId):
         abort(403)
 
 
-@app.route('/api/v1/arenaIspovesti/<int:arenaIspovestId>/putReaction', methods=['PUT'])
+@ app.route('/api/v1/arenaIspovesti/<int:arenaIspovestId>/putReaction', methods=['PUT'])
 def putArenaIspovestReaction(arenaIspovestId):
     reactionString = request.json
     reactionConstant = helpers.mapReactionStringToConstant(reactionString)
@@ -124,7 +134,7 @@ def putArenaIspovestReaction(arenaIspovestId):
         abort(403)
 
 
-@app.route('/api/v1/user', methods=['GET'])
+@ app.route('/api/v1/user', methods=['GET'])
 def getUserInfo():
     userIdHash = hash(str(request.remote_addr))
     userInfo = db.getUserInfo(userIdHash)
@@ -136,8 +146,8 @@ def getUserInfo():
 @ app.route('/addComment', methods=['POST'])
 def addComment():
 
-    print(request.form['ispovestId'])
-    print(request.form['commentInput'])
+    print(request.json['ispovestId'])
+    print(request.json['commentInput'])
 
     return index()
 
