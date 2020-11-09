@@ -39,7 +39,7 @@ def generateIspovest():
             prefix, authorIdHash)
 
         if started:
-            return Response(200)
+            return Response(status=200)
         else:
             # todo if and when started is returned as False, change this to reflect the reason of it being false
             abort(500)
