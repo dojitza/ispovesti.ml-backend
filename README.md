@@ -14,29 +14,23 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Install the rabbitmq broker and make sure its service is started (you may wish to enable it as well)
+this assumes you use apt as your package manager and systemd as your init daemon
+
+```
+sudo apt install rabbitmq-server
+sudo systemctl start rabbitmq
+sudo systemctl enable rabbitmq
+```
+
 ## Launching the service:
 
-Note the PYTHONHASHSEED environment variable. When deploying to production, take note to pass this environment variable to your server if you want to preserve your unique user identification over service restarts.
-
-### bash shell
+You can use gunicorn.
 
 ```
-FLASK_APP=main.py FLASK_ENV=development PYTHONHASHSEED=124391405 flask run --host=0.0.0.0 -p 5000
-```
-
-### fish shell
-
-```
-env FLASK_APP=main.py FLASK_ENV=development PYTHONHASHSEED=124391405 flask run --host=0.0.0.0
-```
-
-## gunicorn
-
-Note the high timeout value. It is required because of the long time it takes
-for an ispovest to be generated
-
-```
-gunicorn main:app --bind 0.0.0.0:8080 --timeout 86400
+cd ispovesti.ml-backend
+pip3 install gunicorn
+gunicorn main:app --bind 0.0.0.0:8080
 ```
 
 ## Contributing
