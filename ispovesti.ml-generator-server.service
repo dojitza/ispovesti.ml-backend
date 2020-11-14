@@ -1,0 +1,13 @@
+[Unit]
+Description=Generator server for ispovesti.ml
+After=network.target
+
+[Service]
+User=dojitza
+Group=www-data
+WorkingDirectory=/home/dojitza/ispovesti.ml-backend/
+Environment="PATH=/home/dojitza/ispovesti.ml-backend/venv/bin"
+ExecStart=/home/dojitza/ispovesti.ml-backend/venv/bin/gunicorn main:app --bind 0.0.0.0:8080
+
+[Install]
+WantedBy=multi-user.target
