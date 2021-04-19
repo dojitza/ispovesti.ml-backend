@@ -2,5 +2,4 @@ flask
 flask-cors
 flask-wtf
 pika
-gpt-2-simple
-tensorflow<2
+gunicorn

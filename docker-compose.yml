@@ -1,0 +1,23 @@
+version: "2.0"  # optional since v1.27.0
+services:
+  service:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/code
+      - logvolume01:/var/log
+    links:
+      - redis
+  generator:
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/code
+      - logvolume01:/var/log
+    links:
+      - redis
+  rabbit-mq:
+    image: rabbit-mq
+volumes:
+  logvolume01: {}
