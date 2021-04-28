@@ -10,7 +10,7 @@ clientDict = collections.OrderedDict()
 class IspovestGenerationClient(object):
     def __init__(self):
         self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='localhost'))
+            pika.ConnectionParameters(host='broker'))
 
         self.channel = self.connection.channel()
 

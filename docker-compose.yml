@@ -1,23 +1,20 @@
-version: "2.0"  # optional since v1.27.0
+version: "2.1"  # optional since v1.27.0
 services:
   service:
-    build: .
+    image: dojitza/ispovesti.ml:service
+    build:
+      context: .
+      dockerfile: service.Dockerfile
     ports:
-      - "5000:5000"
-    volumes:
-      - .:/code
-      - logvolume01:/var/log
-    links:
-      - redis
+      - "8100:8080"
   generator:
-    ports:
-      - "5000:5000"
-    volumes:
-      - .:/code
-      - logvolume01:/var/log
-    links:
-      - redis
-  rabbit-mq:
-    image: rabbit-mq
-volumes:
-  logvolume01: {}
+    image: dojitza/ispovesti.ml:generator
+    build:
+      context: .
+      dockerfile: generator.Dockerfile
+    deploy:
+      resources:
+        limits:
+          memory: 10g
+  broker:
+    image: rabbitmq
